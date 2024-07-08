@@ -10,26 +10,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
+# RUN: %mojo %s | FileCheck %s
 
 # This sample prints the current host system information using APIs from the
 # sys module.
-
-from runtime.llcl import num_cores
 from sys.info import (
+    _current_cpu,
+    _current_target,
+    _triple_attr,
+)
+
+
+from sys import (
     os_is_linux,
-    os_is_windows,
     os_is_macos,
+    os_is_windows,
     has_sse4,
     has_avx,
     has_avx2,
     has_avx512f,
-    has_avx512_vnni,
+    has_vnni,
+    has_intel_amx,
     has_neon,
     is_apple_m1,
-    has_intel_amx,
-    _current_target,
-    _current_cpu,
-    _triple_attr,
+    is_apple_m2,
+    is_apple_m3,
+    num_physical_cores,
+    num_logical_cores,
 )
 
 
@@ -41,28 +48,38 @@ def main():
         os = "macOS"
     else:
         os = "windows"
-    let cpu = String(_current_cpu())
-    let arch = String(_triple_attr())
-    var cpu_features = String(" ")
+    var cpu = String(_current_cpu())
+    var arch = String(_triple_attr())
+    var cpu_features = String("")
     if has_sse4():
-        cpu_features = cpu_features.join(" sse4")
+        cpu_features += " sse4"
     if has_avx():
-        cpu_features = cpu_features.join(" avx")
+        cpu_features += " avx"
     if has_avx2():
-        cpu_features = cpu_features.join(" avx2")
+        cpu_features += " avx2"
     if has_avx512f():
-        cpu_features = cpu_features.join(" avx512f")
-    if has_avx512_vnni():
-        cpu_features = cpu_features.join(" avx512_vnni")
+        cpu_features += " avx512f"
+    if has_vnni():
+        if has_avx512f():
+            cpu_features += " avx512_vnni"
+        else:
+            cpu_features += " avx_vnni"
     if has_intel_amx():
-        cpu_features = cpu_features.join(" intel_amx")
+        cpu_features += " intel_amx"
     if has_neon():
-        cpu_features = cpu_features.join(" neon")
+        cpu_features += " neon"
     if is_apple_m1():
-        cpu_features = cpu_features.join(" Apple M1")
+        cpu_features += " Apple M1"
+    if is_apple_m2():
+        cpu_features += " Apple M2"
+    if is_apple_m3():
+        cpu_features += " Apple M3"
+
     print("System information: ")
-    print("    OS          : ", os)
-    print("    CPU         : ", cpu)
-    print("    Arch        : ", arch)
-    print("    Num Cores   : ", num_cores())
-    print("    CPU Features:", cpu_features)
+    print("    OS             : ", os)
+    print("    CPU            : ", cpu)
+    print("    Arch           : ", arch)
+    print("    Physical Cores : ", num_physical_cores())
+    print("    Logical Cores  : ", num_logical_cores())
+    # CHECK: CPU Features
+    print("    CPU Features   :", cpu_features)
